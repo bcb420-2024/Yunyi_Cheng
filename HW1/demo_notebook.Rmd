@@ -2,17 +2,47 @@
 title: "Demo R Notebook for Simulated Gene Expression"
 output: html_notebook
 ---
-
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
-```{r}
-plot(cars)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+# Create a 5x10 matrix of random integers
+```{r}
+gene_expression <- matrix(sample(1:500, 5 * 10, replace = TRUE), nrow = 5)
+```
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+# Define column names as cond1, cond2, cond3, cond4, cond5, ctrl1, ctrl2, ctrl3, ctrl4, ctrl5
+```{r}
+colnames(gene_expression) <- c("cond1", "cond2", "cond3", "cond4", "cond5", "ctrl1", "ctrl2", "ctrl3", "ctrl4", "ctrl5")
+gene_expression
+```
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+# Define row names as gene1, gene2, gene3 ...
+```{r}
+rownames(gene_expression) <- c("gene1", "gene2", "gene3", "gene4", "gene5")
+gene_expression
+```
+
+# Compute the fold change for each gene.
+```{r}
+calculate_fold_change <- function(data) {
+  # Extract condition values and calculate their mean
+  condition_values <- data[, 1:5] 
+  condition_means <- rowMeans(condition_values)
+  
+  # Extract control values and calculate their mean
+  control_values <- data[, 6:10] # Columns 7 to 11 are for controls
+  control_means <- rowMeans(control_values)
+  
+  # Calculate fold change: condition mean / control mean
+  fold_changes <- condition_means / control_means
+  
+  # Combine gene identifiers with their corresponding fold changes
+  result <- data.frame(fold_change=fold_changes)
+  
+  return(result)
+}
+
+calculate_fold_change(gene_expression)
+```
+

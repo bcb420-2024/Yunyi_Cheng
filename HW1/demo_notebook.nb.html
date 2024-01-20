@@ -1753,31 +1753,107 @@ Expression</h1>
 
 
 <!-- rnb-text-begin -->
-<p>This is an <a href="http://rmarkdown.rstudio.com">R Markdown</a>
-Notebook. When you execute code within the notebook, the results appear
-beneath the code.</p>
-<p>Try executing this chunk by clicking the <em>Run</em> button within
-the chunk or by placing your cursor inside it and pressing
-<em>Ctrl+Shift+Enter</em>.</p>
+<!-- rnb-text-end -->
+<!-- rnb-text-begin -->
+<div id="create-a-5x10-matrix-of-random-integers" class="section level1">
+<h1>Create a 5x10 matrix of random integers</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGxvdChjYXJzKVxuYGBgIn0= -->
-<pre class="r"><code>plot(cars)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZ2VuZV9leHByZXNzaW9uIDwtIG1hdHJpeChzYW1wbGUoMTo1MDAsIDUgKiAxMCwgcmVwbGFjZSA9IFRSVUUpLCBucm93ID0gNSlcbmBgYCJ9 -->
+<pre class="r"><code>gene_expression &lt;- matrix(sample(1:500, 5 * 10, replace = TRUE), nrow = 5)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>Add a new chunk by clicking the <em>Insert Chunk</em> button on the
-toolbar or by pressing <em>Ctrl+Alt+I</em>.</p>
-<p>When you save the notebook, an HTML file containing the code and
-output will be saved alongside it (click the <em>Preview</em> button or
-press <em>Ctrl+Shift+K</em> to preview the HTML file).</p>
-<p>The preview shows you a rendered HTML copy of the contents of the
-editor. Consequently, unlike <em>Knit</em>, <em>Preview</em> does not
-run any R code chunks. Instead, the output of the chunk when it was last
-run in the editor is displayed.</p>
+</div>
+<div id="define-column-names-as-cond1-cond2-cond3-cond4-cond5-ctrl1-ctrl2-ctrl3-ctrl4-ctrl5" class="section level1">
+<h1>Define column names as cond1, cond2, cond3, cond4, cond5, ctrl1,
+ctrl2, ctrl3, ctrl4, ctrl5</h1>
 <!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY29sbmFtZXMoZ2VuZV9leHByZXNzaW9uKSA8LSBjKFwiY29uZDFcIiwgXCJjb25kMlwiLCBcImNvbmQzXCIsIFwiY29uZDRcIiwgXCJjb25kNVwiLCBcImN0cmwxXCIsIFwiY3RybDJcIiwgXCJjdHJsM1wiLCBcImN0cmw0XCIsIFwiY3RybDVcIilcbmdlbmVfZXhwcmVzc2lvblxuYGBgIn0= -->
+<pre class="r"><code>colnames(gene_expression) &lt;- c(&quot;cond1&quot;, &quot;cond2&quot;, &quot;cond3&quot;, &quot;cond4&quot;, &quot;cond5&quot;, &quot;ctrl1&quot;, &quot;ctrl2&quot;, &quot;ctrl3&quot;, &quot;ctrl4&quot;, &quot;ctrl5&quot;)
+gene_expression</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgICBjb25kMSBjb25kMiBjb25kMyBjb25kNCBjb25kNSBjdHJsMSBjdHJsMiBjdHJsM1xuWzEsXSAgICA5OSAgIDQyMiAgIDE0NCAgICA2MSAgIDE1NSAgIDI4MCAgIDE3NiAgIDE5MFxuWzIsXSAgIDM5MyAgIDI3NCAgIDE2OSAgIDQ3MiAgIDQ4OSAgIDQxNiAgIDMwOSAgIDQzOVxuWzMsXSAgIDM4MyAgIDQ2OCAgIDMyNiAgIDE5MiAgIDE4OCAgIDM4OCAgIDM0NCAgIDMxOFxuWzQsXSAgIDI2MCAgIDMwNSAgIDE1MiAgIDM0NiAgICAxNiAgIDIwNyAgIDI4OSAgIDMwM1xuWzUsXSAgIDI4NSAgIDQyNSAgIDQ0OSAgICA0OSAgIDE3MiAgIDMxMSAgIDI4NSAgIDE4MFxuICAgICBjdHJsNCBjdHJsNVxuWzEsXSAgIDI4MiAgIDI2MlxuWzIsXSAgIDMxOCAgIDQ5NFxuWzMsXSAgICAzMyAgIDE2OFxuWzQsXSAgIDQyMSAgIDI2MlxuWzUsXSAgIDQ2NiAgIDM0NlxuIn0= -->
+<pre><code>     cond1 cond2 cond3 cond4 cond5 ctrl1 ctrl2 ctrl3
+[1,]    99   422   144    61   155   280   176   190
+[2,]   393   274   169   472   489   416   309   439
+[3,]   383   468   326   192   188   388   344   318
+[4,]   260   305   152   346    16   207   289   303
+[5,]   285   425   449    49   172   311   285   180
+     ctrl4 ctrl5
+[1,]   282   262
+[2,]   318   494
+[3,]    33   168
+[4,]   421   262
+[5,]   466   346</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="define-row-names-as-gene1-gene2-gene3" class="section level1">
+<h1>Define row names as gene1, gene2, gene3 …</h1>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucm93bmFtZXMoZ2VuZV9leHByZXNzaW9uKSA8LSBjKFwiZ2VuZTFcIiwgXCJnZW5lMlwiLCBcImdlbmUzXCIsIFwiZ2VuZTRcIiwgXCJnZW5lNVwiKVxuZ2VuZV9leHByZXNzaW9uXG5gYGAifQ== -->
+<pre class="r"><code>rownames(gene_expression) &lt;- c(&quot;gene1&quot;, &quot;gene2&quot;, &quot;gene3&quot;, &quot;gene4&quot;, &quot;gene5&quot;)
+gene_expression</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgICAgY29uZDEgY29uZDIgY29uZDMgY29uZDQgY29uZDUgY3RybDEgY3RybDJcbmdlbmUxICAgIDk5ICAgNDIyICAgMTQ0ICAgIDYxICAgMTU1ICAgMjgwICAgMTc2XG5nZW5lMiAgIDM5MyAgIDI3NCAgIDE2OSAgIDQ3MiAgIDQ4OSAgIDQxNiAgIDMwOVxuZ2VuZTMgICAzODMgICA0NjggICAzMjYgICAxOTIgICAxODggICAzODggICAzNDRcbmdlbmU0ICAgMjYwICAgMzA1ICAgMTUyICAgMzQ2ICAgIDE2ICAgMjA3ICAgMjg5XG5nZW5lNSAgIDI4NSAgIDQyNSAgIDQ0OSAgICA0OSAgIDE3MiAgIDMxMSAgIDI4NVxuICAgICAgY3RybDMgY3RybDQgY3RybDVcbmdlbmUxICAgMTkwICAgMjgyICAgMjYyXG5nZW5lMiAgIDQzOSAgIDMxOCAgIDQ5NFxuZ2VuZTMgICAzMTggICAgMzMgICAxNjhcbmdlbmU0ICAgMzAzICAgNDIxICAgMjYyXG5nZW5lNSAgIDE4MCAgIDQ2NiAgIDM0NlxuIn0= -->
+<pre><code>      cond1 cond2 cond3 cond4 cond5 ctrl1 ctrl2
+gene1    99   422   144    61   155   280   176
+gene2   393   274   169   472   489   416   309
+gene3   383   468   326   192   188   388   344
+gene4   260   305   152   346    16   207   289
+gene5   285   425   449    49   172   311   285
+      ctrl3 ctrl4 ctrl5
+gene1   190   282   262
+gene2   439   318   494
+gene3   318    33   168
+gene4   303   421   262
+gene5   180   466   346</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="compute-the-fold-change-for-each-gene." class="section level1">
+<h1>Compute the fold change for each gene.</h1>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2FsY3VsYXRlX2ZvbGRfY2hhbmdlIDwtIGZ1bmN0aW9uKGRhdGEpIHtcbiAgIyBFeHRyYWN0IGNvbmRpdGlvbiB2YWx1ZXMgYW5kIGNhbGN1bGF0ZSB0aGVpciBtZWFuXG4gIGNvbmRpdGlvbl92YWx1ZXMgPC0gZGF0YVssIDE6NV0gXG4gIGNvbmRpdGlvbl9tZWFucyA8LSByb3dNZWFucyhjb25kaXRpb25fdmFsdWVzKVxuICBcbiAgIyBFeHRyYWN0IGNvbnRyb2wgdmFsdWVzIGFuZCBjYWxjdWxhdGUgdGhlaXIgbWVhblxuICBjb250cm9sX3ZhbHVlcyA8LSBkYXRhWywgNjoxMF0gIyBDb2x1bW5zIDcgdG8gMTEgYXJlIGZvciBjb250cm9sc1xuICBjb250cm9sX21lYW5zIDwtIHJvd01lYW5zKGNvbnRyb2xfdmFsdWVzKVxuICBcbiAgIyBDYWxjdWxhdGUgZm9sZCBjaGFuZ2U6IGNvbmRpdGlvbiBtZWFuIC8gY29udHJvbCBtZWFuXG4gIGZvbGRfY2hhbmdlcyA8LSBjb25kaXRpb25fbWVhbnMgLyBjb250cm9sX21lYW5zXG4gIFxuICAjIENvbWJpbmUgZ2VuZSBpZGVudGlmaWVycyB3aXRoIHRoZWlyIGNvcnJlc3BvbmRpbmcgZm9sZCBjaGFuZ2VzXG4gIHJlc3VsdCA8LSBkYXRhLmZyYW1lKGZvbGRfY2hhbmdlPWZvbGRfY2hhbmdlcylcbiAgXG4gIHJldHVybihyZXN1bHQpXG59XG5cbmNhbGN1bGF0ZV9mb2xkX2NoYW5nZShnZW5lX2V4cHJlc3Npb24pXG5gYGAifQ== -->
+<pre class="r"><code>calculate_fold_change &lt;- function(data) {
+  # Extract condition values and calculate their mean
+  condition_values &lt;- data[, 1:5] 
+  condition_means &lt;- rowMeans(condition_values)
+  
+  # Extract control values and calculate their mean
+  control_values &lt;- data[, 6:10] # Columns 7 to 11 are for controls
+  control_means &lt;- rowMeans(control_values)
+  
+  # Calculate fold change: condition mean / control mean
+  fold_changes &lt;- condition_means / control_means
+  
+  # Combine gene identifiers with their corresponding fold changes
+  result &lt;- data.frame(fold_change=fold_changes)
+  
+  return(result)
+}
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiRGVtbyBSIE5vdGVib29rIGZvciBTaW11bGF0ZWQgR2VuZSBFeHByZXNzaW9uIgpvdXRwdXQ6IGh0bWxfbm90ZWJvb2sKLS0tCgpUaGlzIGlzIGFuIFtSIE1hcmtkb3duXShodHRwOi8vcm1hcmtkb3duLnJzdHVkaW8uY29tKSBOb3RlYm9vay4gV2hlbiB5b3UgZXhlY3V0ZSBjb2RlIHdpdGhpbiB0aGUgbm90ZWJvb2ssIHRoZSByZXN1bHRzIGFwcGVhciBiZW5lYXRoIHRoZSBjb2RlLiAKClRyeSBleGVjdXRpbmcgdGhpcyBjaHVuayBieSBjbGlja2luZyB0aGUgKlJ1biogYnV0dG9uIHdpdGhpbiB0aGUgY2h1bmsgb3IgYnkgcGxhY2luZyB5b3VyIGN1cnNvciBpbnNpZGUgaXQgYW5kIHByZXNzaW5nICpDdHJsK1NoaWZ0K0VudGVyKi4gCgpgYGB7cn0KcGxvdChjYXJzKQpgYGAKCkFkZCBhIG5ldyBjaHVuayBieSBjbGlja2luZyB0aGUgKkluc2VydCBDaHVuayogYnV0dG9uIG9uIHRoZSB0b29sYmFyIG9yIGJ5IHByZXNzaW5nICpDdHJsK0FsdCtJKi4KCldoZW4geW91IHNhdmUgdGhlIG5vdGVib29rLCBhbiBIVE1MIGZpbGUgY29udGFpbmluZyB0aGUgY29kZSBhbmQgb3V0cHV0IHdpbGwgYmUgc2F2ZWQgYWxvbmdzaWRlIGl0IChjbGljayB0aGUgKlByZXZpZXcqIGJ1dHRvbiBvciBwcmVzcyAqQ3RybCtTaGlmdCtLKiB0byBwcmV2aWV3IHRoZSBIVE1MIGZpbGUpLgoKVGhlIHByZXZpZXcgc2hvd3MgeW91IGEgcmVuZGVyZWQgSFRNTCBjb3B5IG9mIHRoZSBjb250ZW50cyBvZiB0aGUgZWRpdG9yLiBDb25zZXF1ZW50bHksIHVubGlrZSAqS25pdCosICpQcmV2aWV3KiBkb2VzIG5vdCBydW4gYW55IFIgY29kZSBjaHVua3MuIEluc3RlYWQsIHRoZSBvdXRwdXQgb2YgdGhlIGNodW5rIHdoZW4gaXQgd2FzIGxhc3QgcnVuIGluIHRoZSBlZGl0b3IgaXMgZGlzcGxheWVkLgo=</div>
+calculate_fold_change(gene_expression)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibnJvdyI6NSwibmNvbCI6MSwic3VtbWFyeSI6W119LCJyZGYiOiJVa1JZTXdwWUNnQUFBQU1BQkFNQ0FBTUZBQUFBQUFWVlZFWXRPQUFBQkFJQUFBQUJBQVFBQ1FBQUFBRjRBQUFERXdBQUFBRUFBQUFPQUFBQUJUL25zTlZuc05WblArMFo2VExKRVo0Lzgrbm1OMEIxM3ovblRGblRGblRHUCt2Ty9oREVCN3dBQUFRQ0FBQUFBUUFFQUFrQUFBQUZibUZ0WlhNQUFBQVFBQUFBQVFBRUFBa0FBQUFMWm05c1pGOWphR0Z1WjJVQUFBUUNBQUFBQVFBRUFBa0FBQUFKY205M0xtNWhiV1Z6QUFBQUVBQUFBQVVBQkFBSkFBQUFCV2RsYm1VeEFBUUFDUUFBQUFWblpXNWxNZ0FFQUFrQUFBQUZaMlZ1WlRNQUJBQUpBQUFBQldkbGJtVTBBQVFBQ1FBQUFBVm5aVzVsTlFBQUJBSUFBQUFCQUFRQUNRQUFBQVZqYkdGemN3QUFBQkFBQUFBQkFBUUFDUUFBQUFwa1lYUmhMbVp5WVcxbEFBQUEvZ0FBQkFJQUFBQUJBQVFBQ1FBQUFBZHZjSFJwYjI1ekFBQUNFd0FBQUFZQUFBQUtBQUFBQVFBQUFBRUFBQUFRQUFBQUFRQUVBQWtBQUFBQmNnQUFBQkFBQUFBQkFBUUFDUUFBQUJCMWJtNWhiV1ZrTFdOb2RXNXJMVEUxQUFBQUNnQUFBQUVBQUFBQkFBQUFEUUFBQUFFQUFBQUZBQUFBRFFBQUFBRUFBQUFCQUFBRUFnQUFBdjhBQUFBUUFBQUFCZ0FFQUFrQUFBQUVaV05vYndBRUFBa0FBQUFHWlc1bmFXNWxBQVFBQ1FBQUFBVnNZV0psYkFBRUFBa0FBQUFPY205M2JtRnRaWE11Y0hKcGJuUUFCQUFKQUFBQUNuSnZkM011ZEc5MFlXd0FCQUFKQUFBQUNtTnZiSE11ZEc5MFlXd0FBQUQrQUFBQS9nPT0ifQ== -->
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["fold_change"],"name":[1],"type":["dbl"],"align":["right"]}],"data":[{"1":"0.7403361","_rn_":"gene1"},{"1":"0.9094130","_rn_":"gene2"},{"1":"1.2446043","_rn_":"gene3"},{"1":"0.7280702","_rn_":"gene4"},{"1":"0.8690176","_rn_":"gene5"}],"options":{"columns":{"min":{},"max":[10],"total":[1]},"rows":{"min":[10],"max":[10],"total":[5]},"pages":{}}}
+  </script>
+</div>
+<!-- rnb-frame-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+</div>
+
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiRGVtbyBSIE5vdGVib29rIGZvciBTaW11bGF0ZWQgR2VuZSBFeHByZXNzaW9uIgpvdXRwdXQ6IGh0bWxfbm90ZWJvb2sKLS0tCmBgYHtyIHNldHVwLCBpbmNsdWRlPUZBTFNFfQprbml0cjo6b3B0c19jaHVuayRzZXQoZWNobyA9IFRSVUUpCmBgYAoKIyBDcmVhdGUgYSA1eDEwIG1hdHJpeCBvZiByYW5kb20gaW50ZWdlcnMKYGBge3J9CmdlbmVfZXhwcmVzc2lvbiA8LSBtYXRyaXgoc2FtcGxlKDE6NTAwLCA1ICogMTAsIHJlcGxhY2UgPSBUUlVFKSwgbnJvdyA9IDUpCmBgYAoKIyBEZWZpbmUgY29sdW1uIG5hbWVzIGFzIGNvbmQxLCBjb25kMiwgY29uZDMsIGNvbmQ0LCBjb25kNSwgY3RybDEsIGN0cmwyLCBjdHJsMywgY3RybDQsIGN0cmw1CmBgYHtyfQpjb2xuYW1lcyhnZW5lX2V4cHJlc3Npb24pIDwtIGMoImNvbmQxIiwgImNvbmQyIiwgImNvbmQzIiwgImNvbmQ0IiwgImNvbmQ1IiwgImN0cmwxIiwgImN0cmwyIiwgImN0cmwzIiwgImN0cmw0IiwgImN0cmw1IikKZ2VuZV9leHByZXNzaW9uCmBgYAoKIyBEZWZpbmUgcm93IG5hbWVzIGFzIGdlbmUxLCBnZW5lMiwgZ2VuZTMgLi4uCmBgYHtyfQpyb3duYW1lcyhnZW5lX2V4cHJlc3Npb24pIDwtIGMoImdlbmUxIiwgImdlbmUyIiwgImdlbmUzIiwgImdlbmU0IiwgImdlbmU1IikKZ2VuZV9leHByZXNzaW9uCmBgYAoKIyBDb21wdXRlIHRoZSBmb2xkIGNoYW5nZSBmb3IgZWFjaCBnZW5lLgpgYGB7cn0KY2FsY3VsYXRlX2ZvbGRfY2hhbmdlIDwtIGZ1bmN0aW9uKGRhdGEpIHsKICAjIEV4dHJhY3QgY29uZGl0aW9uIHZhbHVlcyBhbmQgY2FsY3VsYXRlIHRoZWlyIG1lYW4KICBjb25kaXRpb25fdmFsdWVzIDwtIGRhdGFbLCAxOjVdIAogIGNvbmRpdGlvbl9tZWFucyA8LSByb3dNZWFucyhjb25kaXRpb25fdmFsdWVzKQogIAogICMgRXh0cmFjdCBjb250cm9sIHZhbHVlcyBhbmQgY2FsY3VsYXRlIHRoZWlyIG1lYW4KICBjb250cm9sX3ZhbHVlcyA8LSBkYXRhWywgNjoxMF0gIyBDb2x1bW5zIDcgdG8gMTEgYXJlIGZvciBjb250cm9scwogIGNvbnRyb2xfbWVhbnMgPC0gcm93TWVhbnMoY29udHJvbF92YWx1ZXMpCiAgCiAgIyBDYWxjdWxhdGUgZm9sZCBjaGFuZ2U6IGNvbmRpdGlvbiBtZWFuIC8gY29udHJvbCBtZWFuCiAgZm9sZF9jaGFuZ2VzIDwtIGNvbmRpdGlvbl9tZWFucyAvIGNvbnRyb2xfbWVhbnMKICAKICAjIENvbWJpbmUgZ2VuZSBpZGVudGlmaWVycyB3aXRoIHRoZWlyIGNvcnJlc3BvbmRpbmcgZm9sZCBjaGFuZ2VzCiAgcmVzdWx0IDwtIGRhdGEuZnJhbWUoZm9sZF9jaGFuZ2U9Zm9sZF9jaGFuZ2VzKQogIAogIHJldHVybihyZXN1bHQpCn0KCmNhbGN1bGF0ZV9mb2xkX2NoYW5nZShnZW5lX2V4cHJlc3Npb24pCmBgYAoK</div>
 
 
 
