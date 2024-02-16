@@ -31,8 +31,8 @@ repository.
 # Loading necessary packages
 
 # Define the list of packages to be used
-packages <- c("GEOquery", "readr", "dplyr", "biomaRt", "reshape2", "ggplot2",
-              "edgeR", "limma")
+packages <- c("purrr", "GEOquery", "readr", "dplyr", "biomaRt", "reshape2", "ggplot2",
+              "edgeR", "limma", "hgnc", "Biobase", "BiocGenerics", "grateful")
 
 # Function to check if each package is installed and load it, or install it if it's not already installed
 install_and_load <- function(package) {
@@ -239,22 +239,22 @@ any(is.na(filteredDataWithSymbols$hgnc_symbol))
 #### 2.2.3 Clean Dataset
 
 Data cleaning has always been controversial.
-As supported by [@Neely2012] and
-[@Gough2014], we often discover new stuff
-when focusing on such outliers. After reading
-several papers on whether to remove outliers,
-I decided to keep the data cleaning minimal,
-which means I only remove data points if I am
-very confident it is generated from errors in
-the experiment.
+As supported by these two papers,
+[@Neely2012][@Gough2014], we often discover
+new stuff when focusing on such outliers.
+After reading several papers on whether to
+remove outliers, I decided to keep the data
+cleaning minimal, which means I only remove
+data points if I am very confident it is
+generated from errors in the experiment.
 
-According to [@Tranchevent2023], the dataset
-provided is already pre-cleaned by removal of
-samples from conditions other than idiopathic
-Parkinson's Disease (PD) and healthy
-controls, removal of low-quality genetic
-probes, and probes/transcripts with zero
-variance.
+According to the study[@Tranchevent2023], the
+dataset provided is already pre-cleaned by
+removal of samples from conditions other than
+idiopathic Parkinson's Disease (PD) and
+healthy controls, removal of low-quality
+genetic probes, and probes/transcripts with
+zero variance.
 
 Nonetheless, we will double-check for missing
 or incorrect values and remove them.
@@ -805,10 +805,10 @@ samples, 10 are male and 6 are females.
 unique for specific genes? How did you handle
 these?**
 
-According to [@Tranchevent2023], the authors
-already addressed the issue of non-unique
-expression values by selecting the probe or
-transcript with the highest average
+According to the study [@Tranchevent2023],
+the authors already addressed the issue of
+non-unique expression values by selecting the
+probe or transcript with the highest average
 expression across the datasets for inclusion
 in the meta-analysis. This approach was
 chosen because probes or transcripts with low
@@ -847,9 +847,9 @@ standard filtering criteria.
 
 **How did you handle replicates?**
 
-According to [@Tranchevent2023], the dataset
-has preprocessed in some ways. The authors
-handled duplicates or multiple
+According to the study [@Tranchevent2023],
+the dataset has preprocessed in some ways.
+The authors handled duplicates or multiple
 probes/transcripts for the same gene by
 aggregating or selecting data to ensure
 specificity and relevance for their
@@ -908,3 +908,9 @@ dataset?**
 
 The final dataset coverage is 28904 genes
 with 16 samples.
+
+## 5. References
+
+```{r cite R package, include=FALSE}
+cite_packages(out.dir = ".")
+```
