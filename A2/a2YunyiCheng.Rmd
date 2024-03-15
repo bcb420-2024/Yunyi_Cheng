@@ -1,0 +1,659 @@
+---
+title: "A2_YunyiCheng"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+date: "2024-03-10"
+name: Yunyi Cheng 
+csl: a2Nature.csl
+bibliography: a2References.bib
+bibliography-style: plain
+editor_options: 
+  markdown: 
+    wrap: 45
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Introduction
+
+In this notebook, we will be performing
+differential gene expression and preliminary
+ORA. This notebook was developed by *Yunyi
+Cheng* and runs under Docker image in the
+BCB420 GitHub repository.
+
+```{r install and load packages, include=FALSE}
+# Define the list of packages to be used
+packages <- c("limma", "edgeR", "ggplot2", "ComplexHeatmap", "circlize", 
+              "gprofiler2", "knitr")
+
+# Function to check if each package is installed and load it, or install it if it's not already installed
+install_and_load <- function(package) {
+  if (!require(package, character.only = TRUE)) {
+    install.packages(package, dependencies = TRUE)
+    library(package, character.only = TRUE)
+  }
+}
+
+# Apply the function to each package
+invisible(sapply(packages, install_and_load))
+```
+
+### 1.1 Recap for Assignment #1
+
+In Assignment #1, we cleaned and normalized a
+dataset from a recent study on sex-dependent
+gene expression changes in Parkinson's
+disease(PD) [@Tranchevent2023]. We downloaded
+the dataset ( GEO id **GSE168496**) and
+cleaned incorrect values, duplicates, and
+data points which could not be mapped to HUGO
+symbols. Furthermore, we reformatted the data
+frame so that its column name contains
+metadata information. Afterwards, we
+normalized it and performed some
+statistical measures. The final cleaned
+dataset awaiting further analysis has
+coverage of 28904 genes and contains 16
+samples, with the following conditions:
+
+|        | Ctrl | PD  |
+|--------|------|-----|
+| Male   | 5    | 5   |
+| Female | 3    | 3   |
+
+For more information regarding Assignment #1,
+please consult its [R
+Notebook](https://github.com/bcb420-2024/Yunyi_Cheng/wiki/Assignment-%231:-Document).
+
+### 1.2 Tasks for Assignment #2
+
+The task is to take the normalized expression
+data that was created in Assignment #1 and
+rank the genes according to differential
+expression. Once the list is ranked we will
+perform thresholded over-representation
+analysis to highlight dominant themes in our
+top set of genes.
+
+## 2. Differential Gene Expression
+
+### 2.1 Load Cleaned Dataset
+
+First, we need to load the cleaned dataset
+and metadata from Assignment #1.
+
+```{r load cleaned dataset}
+metadata <- read.csv(file=file.path("../A1/metadataDf.csv"), row.names=1)
+cleaned_counts <- read.csv(file=file.path("../A1/a1AggregatedDataDf.csv"), row.names=1)
+```
+
+### 2.2 MDS Plot Revisited
+
+In Assignment #1, we performed MDS plotting,
+let's revisit it:
+
+```{r mds plot}
+# Create a DGEList object
+dge <- DGEList(cleaned_counts)
+
+# Calculate normalization factors to scale the libraries to have the same total counts
+dge <- calcNormFactors(dge)
+
+# Obtain normalized counts per million (CPM)
+norm_counts <- cpm(dge, log=FALSE, prior.count=0.25)
+
+# Capture group names
+group_names <- gsub(".*(Ctrl|PD)_(M|F).*", "\\1_\\2", colnames(norm_counts))
+
+# Create a color palette
+group_colors <- c("Ctrl_M" = "blue", "Ctrl_F" = "green", 
+                  "PD_M" = "red", "PD_F" = "orange")
+
+# Match the colors to the group names
+colors <- group_colors[group_names]
+
+# MDS plot using base R plot, suppressing the automatic plot by setting plot=FALSE
+mds <- limma::plotMDS(as.matrix(norm_counts), plot=FALSE)
+plot(mds$x, mds$y, col=colors, pch=19, 
+     xlab=paste("Leading logFC dim 1 (", mds$percentVar[1], "%)", sep=""), 
+     ylab=paste("Leading logFC dim 2 (", mds$percentVar[2], "%)", sep=""))
+legend("topright", legend=names(group_colors), col=group_colors, pch=19)
+
+# Add a title
+title(main="MDS Plot")
+```
+
+Figure 1: Multidimensional scaling (MDS) plot
+of gene expression profiles. The plot
+visualizes the similarity between RNA-seq
+samples based on their gene expression
+patterns. Each point represents an individual
+sample, positioned according to the leading
+log-fold changes across two dimensions that
+capture the most variation within the data
+set. The percentage values on the axes
+indicate the proportion of the total variance
+explained by each dimension. Samples are
+color-coded based on their group
+classification: control males (Ctrl_M) in
+blue, control females (Ctrl_F) in green,
+Parkinson's disease males (PD_M) in red, and
+Parkinson's disease females (PD_F) in orange.
+Clustering of points by color suggests a
+separation of gene expression profiles
+according to disease state and sex, where the
+control samples tend to cluster separately
+from the Parkinson's disease samples,
+indicating distinct gene expression profiles
+associated with each group.
+
+We can see that PD points are more clustered
+together in the upper right part, whereas the
+points in control group are more clustered in
+the middle part. The role that sex plays in
+the statistics are not as obvious as the
+difference between control and PD samples,
+but we will investigate the role sex plays in
+the following data exploration.
+
+### 2.3 P-values Calculation and Multiple Hypothesis Testing
+
+To identify differentially expressed genes,
+we will perform a linear modeling approach
+with empirical Bayes moderation of standard
+errors using `limma`. When setting up the
+design matrix, I chose to consider disease
+state and sex so that we are investigating
+the correlation between sex and PD, which is
+the reason I chose this dataset.
+
+```{r p-values calculation, warning=FALSE}
+# Convert necessary columns to factors
+metadata$disease.state <- factor(metadata$disease.state)
+metadata$gender <- factor(metadata$gender)
+
+# Create a design matrix with disease state and sex
+design <- model.matrix(~ disease.state + gender, data=metadata)
+# design <- model.matrix(~ disease.state, data=metadata)
+
+# Convert to DGE and estimate dispersion
+d = DGEList(counts=norm_counts, group=metadata$disease.state)
+d <- estimateDisp(d, design)
+
+# Fit quasi-likelihood model to the counts
+fit <- glmQLFit(d, design)
+
+# Significance test
+qlf.ctrl_vs_pd <- glmQLFTest(fit, coef=ncol(design)) 
+
+# Get top hits
+qlf_output_hits <- topTags(qlf.ctrl_vs_pd,
+sort.by = "PValue",
+n = nrow(d))
+result <- qlf_output_hits$table
+
+# Print result
+num_sig <- length(which(result$PValue < 0.05))
+print(paste("Number of differentially expressed genes:", num_sig))
+num_FDR_pass <- length(which(result$FDR < 0.1))
+print(paste("Number of genes passing FDR correction:", num_FDR_pass))
+```
+
+For p-values, I chose a threshold of 0.05
+since it is the most classical one. For FDR
+correction I used Bonferroni's method since
+the number of differentially expressed genes
+is not very large and I want to keep as many
+genes as possible (so that I have enough
+genes to investigate in future analysis). 240
+genes were significantly differentially
+expressed, and 11 genes pass FDR correction.
+
+### 2.4 Volcano Plot
+
+We will now show the amount of differentially
+expressed genes using a Volcano plot and
+highlight genes of interest.
+
+```{r volcano plot}
+# Distinguish upregulated genes from downregulated genes
+result$Category <- with(result, 
+                        ifelse(FDR < 0.1 & logFC > 0.25, "Upregulated",
+                               ifelse(
+                                 FDR < 0.1 & logFC < -0.25, "Downregulated", "Not Significant")))
+
+# Create the volcano plot
+volcano_plot <- ggplot(result, aes(x = logFC, y = -log10(FDR), color = Category)) +
+  geom_point(alpha = 0.5) +
+  scale_color_manual(values = c("Not Significant" = "gray", "Upregulated" = "red", "Downregulated" = "blue")) +
+  geom_hline(yintercept = (-log10(0.1)), linetype = "dashed", color = "black", 
+             linewidth = 1) +
+  geom_vline(xintercept = c(-0.25, 0.25), linetype = "dashed", color = "black",
+             linewidth = 1) +
+  labs(title = "Volcano Plot",
+       x = "Log2 Fold Change",
+       y = "-Log10 FDR",
+       color = "Gene Category") +
+  theme_minimal() +
+  theme(legend.position = "right") +
+  guides(color = guide_legend(title = "Gene Category"))
+
+volcano_plot
+```
+
+Figure 2: Volcano Plot of Differential
+Expression. This plot visualizes the
+differential expression results, displaying
+the relationship between the magnitude of
+change (log2 fold change) and statistical
+significance (-log10 p-value) for each gene.
+Genes that are significantly differentially
+expressed (adjusted p-value \< 0.05) are
+highlighted in red (up-regulated) and blue
+(down-regulated).
+
+### 2.5 Heatmap of Top Hits
+
+Now we are going to visualize the result by
+plotting heatmap. Let's first plot all the
+significant genes (p-value \< 0.05) and
+include annotations for disease type and sex
+of the patients.
+
+```{r ensure correct order}
+# Set the row names of metadata to match the column names of norm_counts
+rownames(metadata) <- colnames(norm_counts)
+```
+
+```{r heatmap p values}
+# Select sig genes
+sig_genes <- rownames(result)[result$PValue < 0.05]
+# Select top genes for heatmap
+top_genes <- norm_counts[rownames(norm_counts) %in% rownames(sig_genes), ]
+
+# Ensure metadata matches the order of the 'norm_counts' columns
+ordered_metadata <- metadata[match(colnames(top_genes), metadata$GSM), ]
+
+# Select top genes for heatmap
+top_hits <- rownames(result)[result$PValue<0.05]
+
+# Scale the heatmap matrix
+heatmap_matrix_tophits <- t(
+  scale(t(norm_counts[which(rownames(norm_counts)%in% top_hits),])))
+
+# Set the colour scale
+if(min(heatmap_matrix_tophits) == 0){
+  heatmap_col = colorRamp2(c( 0, max(heatmap_matrix_tophits)), c( "white", "red"))
+} else {
+  heatmap_col = colorRamp2(c(min(heatmap_matrix_tophits), 0,
+                             max(heatmap_matrix_tophits)),
+                           c("blue", "white", "red"))
+}
+
+# Add annotations
+
+# Define colours - disease state
+unique_disease_state <- unique(metadata$disease.state)
+unique_diseasestatecolors <- rainbow(n = length(unique_disease_state))
+names(unique_diseasestatecolors) <- unique_disease_state
+
+# Define colours - gender
+unique_gender <- unique(metadata$gender)
+unique_gendercolors <- rainbow(n = length(unique_gender))
+names(unique_gendercolors) <- unique_gender
+
+# Annotation pattern
+ha_pat <- HeatmapAnnotation(df = data.frame(disease_state = metadata$disease.state, 
+                                            gender = metadata$gender),
+                            col = list(disease_state = unique_diseasestatecolors, 
+                                       gender = unique_gendercolors),
+                            show_legend = TRUE)
+
+# Plot the heatmap
+pval_heatmap_an <- Heatmap(as.matrix(heatmap_matrix_tophits),
+                           top_annotation = ha_pat,
+                           cluster_rows = TRUE,
+                           cluster_columns = TRUE,
+                           show_row_dend = TRUE,
+                           show_column_dend = TRUE, 
+                           col= heatmap_col,
+                           show_column_names = FALSE,
+                           show_row_names = FALSE,
+                           show_heatmap_legend = TRUE,
+                           column_title = ("Heatmap of Top Hits using the Quasi Liklihood Model (p-value < 0.05)"))
+
+pval_heatmap_an
+```
+
+Figure 3: Heatmap of Top Hits using the Quasi
+Liklihood Model (p-value \< 0.05). The
+heatmap displays expression levels of the top
+differentially expressed genes across all
+samples. Each row represents a gene, and each
+column represents a sample. Gene expression
+is scaled by row; more vibrant colors
+indicate higher expression. Annotations for
+each sample's condition are shown above the
+heatmap. Clustering patterns suggest that
+similar gene expression profiles are
+associated with each condition, indicating
+that our conditions may influence these top
+gene expressions.
+
+```{r heatmap FDR}
+# Select genes pass FDR correction
+top_hits_FDR <- rownames(result)[result$FDR<0.1]
+
+# Scale the heatmap matrix
+heatmap_matrix_tophits_FDR <- t(
+  scale(t(norm_counts[which(rownames(norm_counts)%in% top_hits_FDR),])))
+
+# Set the colour scale
+if(min(heatmap_matrix_tophits_FDR) == 0){
+  heatmap_col = colorRamp2(c( 0, max(heatmap_matrix_tophits_FDR)), c( "white", "red"))
+} else {
+  heatmap_col = colorRamp2(c(min(heatmap_matrix_tophits_FDR), 0,
+                             max(heatmap_matrix_tophits_FDR)),
+                           c("blue", "white", "red"))
+}
+
+# Plot the heatmap
+FDR_heatmap <- Heatmap(as.matrix(heatmap_matrix_tophits_FDR),
+                       top_annotation = ha_pat,
+                       cluster_rows = TRUE,
+                       cluster_columns = TRUE,
+                       show_row_dend = TRUE,
+                       show_column_dend = TRUE,
+                       col = heatmap_col,
+                       show_column_names = FALSE,
+                       show_row_names = FALSE,
+                       show_heatmap_legend = TRUE,
+                       column_title = ("Heatmap of Top Hits using the Quasi Liklihood Model (FDR < 0.1)"))
+FDR_heatmap
+```
+
+Figure 4: Heatmap of Top Hits using the Quasi
+Liklihood Model (FDR \< 0.1). The heatmap
+displays expression levels of the top
+differentially expressed genes across all
+samples. Each row represents a gene, and each
+column represents a sample. Gene expression
+is scaled by row; more vibrant colors
+indicate higher expression. Annotations for
+each sample's condition are shown above the
+heatmap. Clustering patterns suggest that
+similar gene expression profiles are
+associated with each condition, indicating
+that our conditions may influence these top
+gene expressions.
+
+From Figure 3 and 4, we can see that in
+Figure 3, male and female samples are closely
+clustered with samples of the same sex, but
+we cannot see too much clustering with
+samples with different disease state. We
+selected genes that pass FDR correction and
+have a closer look in Figure 4. We can see
+that clustering patterns are more obvious
+this time, with a clear distinction between
+male and female, but still less obvious
+between PD and control. I think that is
+because the mechanism for male and female
+patient of PD is very different, possibly
+involving different disease pathways.
+
+## 3. Thresholded Over-representation Analysis
+
+With our significantly up-regulated and
+down-regulated set of genes, we will run a
+thresholded gene set enrichment analysis.
+Significant genes are selected based on FDR
+\< 0.1 and whether the log fold change is
+greater than or less than 0.25.
+
+### 3.1 Up-regulated and Down-regulated Genes
+
+First we need to separate genes that are
+up-regulated and down-regulated.
+
+```{r separate up down regulated genes}
+# Up-regulated genes
+upregulated_genes <- rownames(result)[result$FDR < 0.1 & result$logFC > 0.25]
+
+# Down-regulated genes
+downregulated_genes <- rownames(result)[result$FDR < 0.1 & result$logFC < -0.25]
+
+# All sig genes
+all_significant_genes <- c(upregulated_genes, downregulated_genes)
+```
+
+### 3.2 ORA using g:profiler
+
+```{r g profiler}
+# gprofiler: upregulated genes
+gprofile_up <- gost(query = upregulated_genes, 
+                    organism = "hsapiens", 
+                    significant = FALSE, 
+                    exclude_iea = TRUE, 
+                    correction_method = "fdr", 
+                    domain_scope = "annotated", 
+                    numeric_ns = "", 
+                    sources = c("GO:BP", "REAC", "WP"))
+ 
+# gprofiler: downregulated genes
+gprofile_down <- gost(query = downregulated_genes, 
+                      organism = "hsapiens", 
+                      significant = FALSE, 
+                      exclude_iea = TRUE, 
+                      correction_method = "fdr", 
+                      domain_scope = "annotated", 
+                      numeric_ns = "", 
+                      sources = c("GO:BP", "REAC", "WP"))
+
+# gprofiler: all sig genes
+gprofile_all <- gost(query = all_significant_genes, 
+                     organism = "hsapiens", 
+                     significant = FALSE, 
+                     exclude_iea = TRUE, 
+                     correction_method = "fdr", 
+                     domain_scope = "annotated", 
+                     numeric_ns = "", 
+                     sources = c("GO:BP", "REAC", "WP"))
+num_genesets_up <- nrow(gprofile_up$result)
+num_genesets_down <- nrow(gprofile_down$result)
+num_genesets_all <- nrow(gprofile_all$result)
+```
+
+Similar to the homework assignment, we
+filtered out large terms for these genes.
+
+```{r filter out large terms}
+# Filter out large terms for upregulated genes
+filtered_gprofile_up <- gprofile_up$result[gprofile_up$result$term_size <= 200, ]
+
+# Filter out large terms for downregulated genes
+filtered_gprofile_down <- gprofile_down$result[gprofile_down$result$term_size <= 200, ]
+
+filtered_gprofile <- gprofile_all$result[gprofile_all$result$term_size <= 200, ]
+
+# Check the number of instances in the filtered g:Profiler results
+num_filtered_up <- nrow(filtered_gprofile_up)
+num_filtered_down <- nrow(filtered_gprofile_down)
+num_filtered_all <- nrow(filtered_gprofile)
+
+# Print the numbers for filtered g:Profiler results
+print(paste("Number of filtered gene sets for upregulated genes:", num_filtered_up))
+print(paste("Number of filtered gene sets for downregulated genes:", num_filtered_down))
+print(paste("Number of filtered gene sets for all significant genes:", num_filtered_all))
+```
+
+```{r table}
+# Create a table for upregulated gene sets
+upregulated_table <- kable(filtered_gprofile_up, 
+                           caption = "Enriched Gene Sets for Upregulated Genes",
+                           row.names = FALSE)
+
+# Create a table for downregulated gene sets
+downregulated_table <- kable(filtered_gprofile_down, 
+                             caption = "Enriched Gene Sets for Downregulated Genes",
+                             row.names = FALSE)
+
+# Create a table for all gene sets
+all_table <- kable(filtered_gprofile, 
+                   caption = "Enriched Gene Sets for All Sig Genes",
+                   row.names = FALSE)
+```
+
+**Tables**:
+
+The tables below present the enriched gene
+sets for upregulated and downregulated genes
+after filtering to exclude overly large gene
+sets:
+
+```{r table display}
+upregulated_table
+downregulated_table
+all_table
+```
+
+### 3.3 Gene Set Enrichment Analysis Discussion
+
+**Methodology**: We selected the `g:Profiler`
+tool for our over-representation analysis due
+to its comprehensive collection of annotation
+data and its ease of integration within the R
+environment. We have also done a homework
+using `g:Profiler` so it is very convenient
+to integrate into our notebook.
+
+**Annotation Data**: The analysis included
+gene ontology (GO) annotations for biological
+processes (<GO:BP>), Reactome (REAC), and
+WikiPathways (WP) to ensure a broad
+representation of potential pathways and
+processes.
+
+**Version of Annotation**: The analysis was
+conducted using the
+`gprofiler2: Interface to the 'g:Profiler' Toolset`
+version available on 2024-02-23, ensuring
+up-to-date annotations were used.
+
+**Gene Sets Returned**: After filtering for
+gene sets with term sizes of 200 or fewer, we
+found that `num_filtered_up` gene sets were
+returned for upregulated genes and
+`num_filtered_down` for downregulated genes.
+
+**Comparison of Results**: We can see that
+there is a large overlap betweeen pathways in
+up-regulated gens and that in the entire list
+of genes. Most of the genes are involved in
+biological processes (like pre and post
+synaptic assembly) and reactome (like HDMs
+demethylate histones). Since there is only
+one term in
+`Enriched Gene Sets for Downregulated Genes`,
+the intepretation is inconclusisve, but we
+can see that pathways of down-regulated genes
+are very different comparing to that of
+up-regualted genes.
+
+## 4. Intepretation
+
+The ORA results from the study seem to
+support conclusions or mechanisms discussed
+in the original paper, indicating significant
+sex disparities in PD-associated
+transcriptomic changes. These changes result
+in coordinated modulations of molecular
+processes, particularly highlighting the
+importance of mitochondrial pathways and
+specific regulatory factors. Future
+investigating could involve identifying
+pathways and regulatory networks that are
+differentially affected in males and females
+with PD.
+
+Here are the top hits from my result:
+
+```{r}
+top_hits_FDR
+```
+
+The evidence suggests RPS4Y1 is a significant
+biomarker for Parkinson's disease (PD),
+differentiating male PD samples from
+controls. This aligns with studies
+highlighting sex-specific genetic expressions
+in PD. According to this paper by Sun [@Sun2014], RPS4Y1's role
+in ribosomal processes may impact
+neurodegeneration, reflecting broader
+research on gene expression regulation in PD.
+
+I found another paper [@Pottmeier2023]
+focusing on genetic sex differences in early
+human neuronal development which a
+substantial context for understanding the
+role of genes in Parkinson's disease (PD).
+
+My result include genes such as "RPS4Y1,"
+"EIF1AY," "USP9Y," "ZFY," "NLGN4Y," "KDM5D,"
+"DDX3Y," "UTY," "TMSB4Y," "PCDH11Y," and
+"ZFX," aligns with the understanding that sex
+chromosome genes play a crucial role in
+neuronal development and potentially in the
+pathogenesis of neurodegenerative diseases.
+
+RPS4Y1 and EIF1AY are located on the Y
+chromosome, potentially implicating their
+unique contributions to male-specific brain
+development and functions. Their expression
+in the brain could influence susceptibility
+to or protection against PD in males.
+
+USP9Y and DDX3Y are also Y-linked genes known
+for their roles in spermatogenesis but may
+have broader implications in gene regulation
+and cellular stress responses, which are
+crucial in neurodegenerative diseases.
+
+ZFY and KDM5D contribute to gene expression
+regulation and chromatin remodeling,
+respectively, processes that are vital for
+maintaining neuronal health and function.
+
+NLGN4Y is involved in synapse formation and
+function, suggesting its potential impact on
+neuronal communication, which is often
+disrupted in PD.
+
+UTY, TMSB4Y, and PCDH11Y play roles in
+transcription regulation, actin cytoskeleton
+organization, and cell adhesion,
+respectively, further implicating the complex
+contributions of Y chromosome genes to brain
+physiology and potentially to PD pathology.
+
+Insights from Pottmeier's dissertation
+reinforce the importance of considering sex
+as a biological variable in PD research. The
+expression of these Y-linked genes in early
+neuronal development suggests that they could
+have lifelong impacts on brain structure,
+function, and disease susceptibility. Future
+investigation could work on understanding
+their specific roles and leading to targeted
+interventions that consider genetic sex
+differences.
+
+## 5. References
+
+Please note that all package references are included in the `a2References.bib`.
