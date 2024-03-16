@@ -380,6 +380,7 @@ if (!is.data.frame(metadataDf)) {
   metadataDf <- as.data.frame(metadataDf)
 }
 is.data.frame(metadataDf)
+write.csv(metadataDf, "metadataDf.csv")
 ```
 
 Since GSM numbers as row names are not very
@@ -464,6 +465,12 @@ aggregatedData$hgnc_symbol <- NULL
 # Now to apply combinedInfo as column names in aggregatedData
 names(aggregatedData) <- metadataDf$combinedInfo
 names(aggregatedData)
+
+# Convert to a data frame
+aggregatedDataDf <- as.data.frame(aggregatedData)
+
+# Write the normalized CPM to a CSV file
+write.csv(aggregatedDataDf, file="a1AggregatedDataDf.csv", row.names=TRUE)
 ```
 
 ### 3.2 Pre-normalization Plots
