@@ -1,0 +1,437 @@
+---
+title: "A3 - Data set Pathway and Network Analysis"
+author: "YunyiCheng"
+bibliography: a3References.bib
+output:
+  html_document:
+    df_print: paged
+    doc: yes
+    toc: true
+date: "2024-04-02"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Introduction
+
+This notebook was developed by *Yunyi Cheng* and runs under Docker image
+in the BCB420 GitHub repository. We will be using `BiocManager` to
+access the bioconductor project package repository [@BiocManager].
+
+### 1.1 Recap for Assignment #1 and Assignment #2
+
+In Assignment #1, we cleaned and normalized a dataset from a recent
+study on sex-dependent gene expression changes in Parkinson's
+disease(PD) [@Tranchevent2023]. We downloaded the dataset ( GEO id
+**GSE168496**) and cleaned incorrect values, duplicates, and data points
+which could not be mapped to HUGO symbols. Furthermore, we reformatted
+the data frame so that its column name contains metadata information.
+Afterwards, we normalized it and performed some statistical measures.
+The final cleaned dataset awaiting further analysis has coverage of
+28904 genes and contains 16 samples, with the following conditions:
+
+|        | Ctrl | PD  |
+|--------|------|-----|
+| Male   | 5    | 5   |
+| Female | 3    | 3   |
+
+For more information regarding Assignment #1, please consult its [R
+Notebook](https://github.com/bcb420-2024/Yunyi_Cheng/wiki/Assignment-%231:-Document).
+
+In Assignment #2, we took the normalized expression data that was
+created in Assignment #1 and rank the genes according to differential
+expression. There are 240 differentially expressed genes with p-value \<
+0.05 and 11 genes have FDR \< 0.1. After the list was ranked we
+performed thresholded over-representation analysis to highlight dominant
+themes in our top set of genes using G:Profiler. With thresholds FDR \<
+0.1, term size \<= 200, and \|logFC\| \> 0.25, there are 92 genes in
+total, with 91 genes being up-regulated 1 gene being down-regulated.
+
+For more information regarding Assignment #2, please consult its [R
+Notebook](https://github.com/bcb420-2024/Yunyi_Cheng/wiki/Assignment-%232:-Document).
+
+### 1.2 Tasks for for Assignment #3
+
+In this notebook, we will take the ranked data that was created in
+Assignment #2 and perform a non-thresholded pathway analysis.
+
+```{r install and load packages, include=FALSE}
+# Define the list of packages to be used
+packages <- c("BiocManager", "fgsea", "GSA")
+
+# Function to check if each package is installed and load it, or install it if it's not already installed
+install_and_load <- function(package) {
+  if (!require(package, character.only = TRUE)) {
+    install.packages(package, dependencies = TRUE)
+    library(package, character.only = TRUE)
+  }
+}
+
+# Apply the function to each package
+invisible(sapply(packages, install_and_load))
+```
+
+## 2. Non-thresholded Gene set Enrichment Analysis
+
+We will now conduct non-thresholded gene set enrichment analysis using
+the ranked set of genes from Assignment #2.
+
+### 2.1 Load and Proprocess Data
+
+**What method did you use? What genesets did you use? Make sure to
+specify versions and cite your methods.**
+
+In this analysis, non-thresholded gene set enrichment analysis (GSEA)
+was conducted using the `fgsea` package (version `1.28.0`) in R
+[@fgsea]. This approach is different from thresholded analyses because
+it considers the entire distribution of gene expression changes, rather
+than focusing solely on those genes that surpass a specific significance
+threshold. Thus, this method is its able to capture subtle yet
+meaningful patterns of expression across a broad set of genes, which
+might be overlooked in a thresholded analysis.
+
+```{r prepare ranked gene list}
+# Load the DEG results from Assignment #2
+deg_results <- read.table(file = "./DEG_results.txt", header = TRUE, sep = "\t")
+
+# Make sure PValue and logFC are numeric
+deg_results$PValue <- as.numeric(deg_results$PValue)
+deg_results$logFC <- as.numeric(deg_results$logFC)
+
+# Add a new column to the data frame for the signed rank
+deg_results$signed_rank <- -log10(deg_results$PValue) * sign(deg_results$logFC)
+
+# Coerce the signed rank to be numeric
+deg_results$signed_rank <- as.numeric(deg_results$signed_rank)
+
+# Create a ranked list of genes for fgsea
+# Note: names of the ranked list - gene names, values - signed ranks
+ranked_genes <- data.frame(gene_name = rownames(deg_results), rank = deg_results$signed_rank)
+ranked_genes <- ranked_genes[order(-ranked_genes$rank),]
+ranked_genes$rank <- as.numeric(ranked_genes$rank)
+
+# Save ranked list
+write.table(ranked_genes, "./ranked_genes.rnk", 
+            quote=FALSE, 
+            sep='\t', 
+            row.names = FALSE)
+
+# Process ranked_gene for fgsea
+rank_fgsea <- as.numeric(ranked_genes$rank)
+names(rank_fgsea) <- ranked_genes$gene_name
+```
+
+For the gene sets, the analysis utilized pathways from
+`Human_GOBP_AllPathways_noPFOCR_no_GO_iea_March_01_2024_symbol.gmt`,
+which is a curated collection of gene sets related to human biological
+processes from Bader lab [@Merico2010]. These gene sets are derived from
+the Gene Ontology Biological Processes (GOBP) without inclusion of
+electronically inferred annotations (no IEA), ensuring a high confidence
+in the biological relevance of the pathways analyzed.
+
+```{r prepare GMT file}
+# Define the path to the GMT file
+gmt_path <- "./Human_GOBP_AllPathways_noPFOCR_no_GO_iea_March_01_2024_symbol.gmt"
+
+bader_geneset <- gmtPathways(gmt_path)
+```
+
+### 2.2 Run GSEA
+
+Now we can run GSEA through `fgsea` package.
+
+```{r Run fgsea, warning=FALSE}
+# Run fgsea
+fgsea_results <- fgsea(pathways = bader_geneset, 
+                       stats = rank_fgsea, 
+                       nperm = 1000,
+                       minSize = 15,
+                       maxSize = 200)
+
+# Look at the top results
+top_fgsea_results <- fgsea_results[order(fgsea_results$padj), ][1:10,]
+
+# Print the top significant pathways
+print(top_fgsea_results)
+```
+
+```{r fgsea_results 1}
+fgsea_results[NES > 0][order(fgsea_results[NES > 0]$padj), ]
+```
+
+**Table 1: Positively Enriched Gene Sets.** It lists gene sets that show
+positive normalized enrichment scores (NES) indicative of genes
+upregulated in PD compared to control, considering both males and
+females. Gene sets are ordered by their adjusted p-values (padj) in
+ascending order, showing the most statistically significant pathways at
+the top.
+
+```{r fgsea_results 2}
+fgsea_results[NES < 0][order(fgsea_results[NES < 0]$padj), ]
+```
+
+**Table 2: Negatively Enriched Gene Sets.** They are pathways enriched
+among genes downregulated in Parkinson's disease compared to control.
+They are also sorted by increasing adjusted p-values (padj), with
+pathways demonstrating the highest significance displayed at the top.
+
+### 2.3 Discussions
+
+**Summarize your enrichment results.** The fgsea analysis performed
+identified the top significant pathways from the ranked gene list
+derived from PD-related differential gene expression data. The output
+highlights pathways most significantly associated with the PD. These
+results include pathways with adjusted P-values indicating statistical
+significance, thus suggesting potential biological mechanisms or
+processes altered in PD.
+
+**How do these results compare to the results from the thresholded
+analysis in Assignment #2. Compare qualitatively. Is this a straight
+forward comparison? Why or why not?**
+
+A non-thresholded analysis includes all genes in the ranking process,
+which allows for the identification of subtle yet consistent changes in
+gene expression across a pathway. In contrast, a thresholded analysis in
+Assignment #2 focuses on genes that surpass a certain cutoff in
+expression changes, potentially missing out on these subtle changes.
+These analysis do have results in common like pathways of ribosomal
+processes and gene RPS4Y1 that may inpact neurodegeneration, a
+significant biomarker for PD [@Sun2014]. The comparison is not
+straightforward as we are comparing specific genes with gene sets ana
+pathways. Both methods provide valuable and complementary insights. The
+thresholded analysis identifies strong individual gene signals, whereas
+non-thresholded GSEA captures broader effects across gene sets.
+
+## 3. Visualize Geneset Enrichment Analysis in Cytoscape
+
+### 3.1 Original Enrichment Map
+
+**Create an enrichment map - how many nodes and how many edges in the
+resulting map? What thresholds were used to create this map? Make sure
+to record all thresholds. Include a screenshot of your network prior to
+manual layout.**
+
+Now we can use
+`formatted_gsea_report_pos.tsv`,`formatted_gsea_report_neg.tsv`, and
+`ranked_genes.rnk` we saved previously for enrichment map generation.
+
+![Figure 1. Screenshot of Enrichment Map before Manual
+Layout](./fig/GSEAmap_original.png) ![](./fig/GSEAlegend.png)
+
+**Figure 1. Screenshot of Enrichment Map before Manual Layout.** This
+network visualization displays the clustered gene sets with red nodes
+indicating upregulated gene sets and blue nodes indicating downregulated
+gene sets in PD condition. The size of each node corresponds to the gene
+set size, and the thickness of the edges reflects the degree of overlap
+between the gene sets. Legend credit to [@Reimand2019].
+
+There are 1290 nodes and 4620 edges in the resulting map. Since there
+are four conditions (male/female, PD/control), and filters too stringent
+may result in insufficient amount of node and edges for further
+analysis, I relaxed the FDR Q-value to be 0.5. The complete set of
+threshold used is shown below:
+
+|                          |       |
+|--------------------------|-------|
+| Node Cutoff - P-value    | 0.05  |
+| Node Cutoff - P-value    | 0.5   |
+| Edge Cutoff - Similarity | 0.375 |
+
+### 3.2 Annotated Enrichment Map
+
+**Annotate your network - what parameters did you use to annotate the
+network. If you are using the default parameters make sure to list them
+as well.**
+
+I used AutoAnnotate, which is part of EnrichmentMap pipeline workflow.
+The detailed parameter settings are shown below:
+
+| Option Category | Parameter                                 | Setting or Value                    |
+|-------------------|----------------------|-------------------------------|
+| Cluster Options | Use clusterMaker App                      | Yes                                 |
+| Cluster Options | Cluster algorithm                         | MCL Cluster                         |
+| Cluster Options | Edge weight column                        | similarity_coefficient              |
+| Cluster Options | Create singleton clusters                 | No                                  |
+| Cluster Options | Layout network to prevent cluster overlap | Yes                                 |
+| Label Options   | Label Column                              | GS_DESCR                            |
+| Label Options   | Label Algorithm                           | WordCloud: Adjacent Words (default) |
+| Label Options   | Max words per label                       | 3                                   |
+| Label Options   | Minimum word occurrence                   | 1                                   |
+| Label Options   | Adjacent word bonus                       | 8                                   |
+
+We relaxed the threshold for Q-value in the previous section, allowing
+for more meaningful information to be included. Now we can restrict the
+threshold a little more to exclude some noise nodes, and I set the
+Q-value threshold to be 0.3 (other threshold remain the same). Below is
+the annotated enrichment map prior to manual modification.
+
+![Figure 2. Annotated Enrichment Map before Manual
+Modification](./fig/GSEAannotated_original.png)
+![](./fig/GSEAlegend.png)
+
+**Figure 2. Annotated Enrichment Map before Manual Modification.**
+Significant clusters within the network, with annotations highlighting
+the dominant biological processes or pathways represented by each
+cluster. The size of each node corresponds to the gene set size, and the
+thickness of the edges reflects the degree of overlap between the gene
+sets. Legend credit to [@Reimand2019].
+
+### 3.3 Publication-ready Figure
+
+**Make a publication ready figure - include this figure with proper
+legends in your notebook.** ![Figure 3. Annotated Enrichment Map before
+Manual Modification](./fig/GSEApaper.png) ![](./fig/GSEAlegend.png)
+**Figure 3. Annotated Enrichment Map before Manual Modification.**
+Significant clusters within the network, with annotations highlighting
+the dominant biological processes or pathways represented by each
+cluster. The size of each node corresponds to the gene set size, and the
+thickness of the edges reflects the degree of overlap between the gene
+sets. Legend credit to [@Reimand2019].
+
+### 3.4 Theme Network
+
+**Collapse your network to a theme network. What are the major themes
+present in this analysis? Do they fit with the model? Are there any
+novel pathways or themes?**
+
+The major themes present in this analysis seem to be nuclear regulation
+and transport processes, ribunucleoprotein complexes and viral response,
+and T-cell activation & signalling pathways. They fit with the previous
+model. Comparing the result with Assignment #2, we can see that most of
+the genes are involved in biological processes (like pre and post
+synaptic assembly) and reactome (like T-cell activation).
+
+There is a novel theme worth noting, that is ribunucleoprotein complexes
+and viral response.
+
+## 4. Interpretation and detailed view of results
+
+### 4.1 Interpretation
+
+**Do the enrichment results support conclusions or mechanism discussed
+in the original paper? How do these results differ from the results you
+got from Assignment #2 thresholded methods?**
+
+Overall, the paper revealed significant sex disparities in PD-associated
+transcriptomic changes, resulting in coordinated modulations of
+molecular processes. The main finding of the original is the
+identification of significant sex differences in Parkinson's disease
+(PD)-associated transcriptomic changes in the brain, with a particular
+focus on mitochondrial pathways and specific regulatory factors like
+NR4A2.
+
+The result support the original findings of the paper to a certain
+degree, since the enrichment map include the geneset involved in
+transcriptomic changes and mitochondrial pathways. Thresholded analysis
+in A2 revealed classical genesets correlated with PD; nonetheless, there
+are some genesets that were overlooked in thresholded analysis present
+in today's analysis (like viral response), which include more novel
+aspects to investigate.
+
+**Can you find evidence (i.e., publications) to support some of the
+results that you see? How does this evidence support your result?**
+
+Most of the themes we found in enrichment map are supported by the
+original paper, I would like to focus on the novel theme we discovered
+in this assignment. Viral infections are known to affect protein
+aggregation, a common feature in neurodegenerative disorders. An article
+by [@LeblancVorberg2022] provides supporting details. For instance,
+influenza-A, flaviviruses, and herpesviruses have been shown to induce
+acute or chronic Parkinson-like symptoms or post-encephalitic
+parkinsonism. Moreover, infections with hepatitis C and B viruses (HCV
+and HBV) have been linked to an increased risk of developing PD. In
+experimental models, mice infected with a neurotropic influenza-A virus
+exhibited α-Synuclein inclusions in dopaminergic neurons, highlighting
+the direct impact of viral infections on processes leading to protein
+aggregation in neurodegenerative diseases.
+
+### 4.1 Dark Matter Analysis
+
+In this part, we will follow the lecture slides to perform dark matter
+analysis. We will be using `GSA` package for reading the gene set file
+[@GSA].
+
+```{r load gmt file}
+gmt_file <- file.path("./Human_GOBP_AllPathways_noPFOCR_no_GO_iea_March_01_2024_symbol.gmt")
+capture.output(genesets <- GSA.read.gmt(gmt_file),file="gsa_load.out")
+names(genesets$genesets) <- genesets$geneset.names
+```
+
+```{r get the expression and rank}
+expression <- read.table(file = "./a1NormalizedCpmDf.csv",
+                         header = TRUE, sep = ",", stringsAsFactors = FALSE)
+ranks <- read.table(file = "./ranked_genes.rnk",
+                    header = TRUE, sep = "\t", quote="\"",
+                    stringsAsFactors = FALSE)
+```
+
+```{r read two enrichment result files}
+# 2 gsea results files
+enr_file1 <- read.table(file = "./formatted_gsea_report_pos.tsv",
+                        header = TRUE, sep = "\t", quote="\"",
+                        stringsAsFactors = FALSE,row.names=1)
+enr_file2 <- read.table(file = "formatted_gsea_report_neg.tsv",
+                        header = TRUE, sep = "\t", quote="\"",
+                        stringsAsFactors = FALSE,row.names=1)
+
+# Calculate q-values
+enr_file1$qval <- p.adjust(enr_file1$pval, method = "fdr")
+enr_file2$qval <- p.adjust(enr_file2$pval, method = "fdr")
+```
+
+```{r get genes from enriched pathway}
+FDR_threshold <- 0.1
+# Get the genes from the set of enriched pathway (no matter what threshold)
+all_sig_enr_genesets<- c(rownames(enr_file1)[which(enr_file1[,"qval"]<=FDR_threshold)], rownames(enr_file2)[which(enr_file2[,"qval"]<=FDR_threshold)])
+
+genes_sig_enr_gs <- c()
+for(i in 1:length(all_sig_enr_genesets)){
+  current_geneset <- unlist(genesets$genesets[which(genesets$geneset.names %in% all_sig_enr_genesets[i])])
+  genes_sig_enr_gs <- union(genes_sig_enr_gs, current_geneset)
+}
+```
+
+```{r all gene set}
+genes_all_gs <- unique(unlist(genesets$genesets))
+```
+
+```{r genes no annotation}
+diff_expr_genes <- rownames(deg_results[deg_results$FDR < 0.1, ])
+# Get the set of genes that have no annotation
+genes_no_annotation <- setdiff(diff_expr_genes, genes_all_gs)
+genes_no_annotation_enriched <- setdiff(diff_expr_genes, genes_sig_enr_gs)
+
+# Print the number of enriched genes with no annotation
+cat("Number of genes with no annotation:", length(genes_no_annotation), "\n")
+if(length(genes_no_annotation) > 0) {
+  cat("Examples of genes with no annotation:", head(genes_no_annotation), "\n")
+}
+
+cat("Number of enriched genes with no annotation:", length(genes_no_annotation_enriched), "\n")
+if(length(genes_no_annotation_enriched) > 0) {
+  cat("Examples of enriched genes with no annotation:", head(genes_no_annotation_enriched), "\n")
+}
+```
+
+```{r de genes not included in enriched genes}
+# Indices of DE genes not included in enriched gene lists
+no_annotation_enriched_idx <- which(rownames(expression) %in% genes_no_annotation_enriched)
+cat("Indices of differentially expressed genes not included in enriched gene lists:\n")
+cat(paste(no_annotation_enriched_idx, collapse = ", "))
+```
+
+As we can see that, there is no over lap between DEGs with the enriched
+gene lists. The absence of indices for such DEGs suggests that the DEGs
+are not part of the gene sets that were considered significantly
+enriched in the analysis. Enrichment analysis often focuses on genes
+that collectively show a pattern of expression indicative of certain
+biological functions or processes, which may not include every DEG. This
+is uncommon, but I think this might have something to do with the
+complexity and multifactorial nature of this study.
+
+## 5. References
